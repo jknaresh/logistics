@@ -1,0 +1,231 @@
+import json
+
+from django.http import JsonResponse
+from django.shortcuts import render
+
+from django.views import View
+
+from arango.connection import db_conn
+
+
+class HomeView(View):
+    permission_checker = None
+
+    template_name = 'index.html'
+
+    def get(self, request, *args, **kwargs):
+        return render(
+            request, self.template_name, context=locals(),
+            content_type="text/html", status=200)
+
+    def post(self, request, *args, **kwargs):
+        return render(
+            request, self.template_name, context=locals(),
+            content_type="text/html", status=200)
+
+
+class Initialize(View):
+    permission_checker = None
+
+    template_name = 'index.html'
+
+    def get(self, request, *args, **kwargs):
+        db_conn
+        return render(
+            request, self.template_name, context=locals(),
+            content_type="text/html", status=200)
+
+    def post(self, request, *args, **kwargs):
+        return render(
+            request, self.template_name, context=locals(),
+            content_type="text/html", status=200)
+
+
+class Provider(View):
+    permission_checker = None
+
+    provider_collection = db_conn['provider']
+
+    res = dict()
+    res["status"] = False
+
+    def get(self, request, *args, **kwargs):
+        all_providers_list = list()
+
+        email = request.GET.get("email")
+
+        if email:
+            try:
+                ap = self.provider_collection.fetchDocument(key=email)
+                data = dict()
+                data['name'] = ap["name"]
+                data["email"] = ap["email"]
+                data["ph_no"] = ap["mobile"]
+                data["language"] = ap["language"]
+                data["currency"] = ap["currency"]
+                all_providers_list.append(data)
+            except Exception as e:
+                pass
+
+        else:
+
+            all_providers = self.provider_collection.fetchAll()
+            for ap in all_providers:
+                data = dict()
+                data['name'] = ap["name"]
+                data["email"] = ap["email"]
+                data["ph_no"] = ap["mobile"]
+                data["language"] = ap["language"]
+                data["currency"] = ap["currency"]
+                all_providers_list.append(data)
+
+        return JsonResponse(all_providers_list, safe=False)
+
+    def post(self, request, *args, **kwargs):
+        """
+        POST data parameters
+        # name, email, mobile, language, currency
+
+        :param request:
+        :param args:
+        :param kwargs:
+        :return:
+        """
+        email = request.POST.get("email")
+        action = request.POST.get("action")
+        if action == "delete":
+            try:
+                pd = self.provider_collection.fetchDocument(key=email)
+                pd.delete()
+                self.res["status"] = True
+            except Exception as e:
+                pass
+
+        else:
+
+            name = request.POST.get("name")
+            mobile = request.POST.get("mobile")
+            language = request.POST.get("language")
+            currency = request.POST.get("currency")
+            try:
+                pd = self.provider_collection.fetchDocument(key=email)
+                if name:
+                    pd['name'] = name
+
+                if mobile:
+                    pd["ph_no"] = mobile
+
+                if language:
+                    pd["language"] = language
+
+                if currency:
+                    pd["currency"] = currency
+
+                pd.save()
+                self.res["status"] = True
+
+            except Exception as e:
+
+                data = dict()
+                data['name'] = name
+                data["email"] = email
+                data["ph_no"] = mobile
+                data["language"] = language
+                data["currency"] = currency
+
+                provider_document = self.provider_collection.createDocument()
+                provider_document.set(data)
+                provider_document._key = email
+                provider_document.save()
+
+                self.res["status"] = True
+
+        return JsonResponse(self.res, safe=False)
+
+
+# create provider
+# create service_area
+# update provider
+# update service_area
+
+class ServiceArea(View):
+    """
+    provider email, geojson (polygon), polygon_name, price
+    """
+    permission_checker = None
+
+    service_area_collection = db_conn['service_area']
+
+    res = dict()
+    res["status"] = False
+
+    def get(self, request, *args, **kwargs):
+        all_providers_list = list()
+
+        email = request.GET.get("email")
+        if email:
+            try:
+                sa = self.service_area_collection.fetchDocument(key=email)
+                data = dict()
+                data['geojson'] = sa["geojson"]
+                data["polygon_name"] = sa["polygon_name"]
+                data["price"] = sa["price"]
+
+                all_providers_list.append(data)
+            except Exception as e:
+                pass
+        else:
+            all_sa = self.service_area_collection.fetchAll()
+            for sa in all_sa:
+                data = dict()
+                data['geojson'] = sa["geojson"]
+                data["email"] = sa._key
+                data["polygon_name"] = sa["polygon_name"]
+                data["price"] = sa["price"]
+                all_providers_list.append(data)
+
+        return JsonResponse(all_providers_list, safe=False)
+
+    def post(self, request, *args, **kwargs):
+        email = request.POST.get("email")
+        action = request.POST.get("action")
+
+        if action == "delete":
+            try:
+                sa = self.service_area_collection.fetchDocument(key=email)
+                sa.delete()
+                self.res["status"] = True
+            except Exception as e:
+                pass
+
+        else:
+
+            geojson = request.POST.get("geojson")
+            polygon_name = request.POST.get("polygon_name")
+            price = request.POST.get("price")
+            try:
+                sa = self.service_area_collection.fetchDocument(key=email)
+                if geojson:
+                    sa['geojson'] = geojson
+                if polygon_name:
+                    sa["polygon_name"] = polygon_name
+                if price:
+                    sa["price"] = price
+
+                sa.save()
+                self.res["status"] = True
+
+            except Exception as e:
+
+                sa = dict()
+                sa['geojson'] = geojson
+                sa["polygon_name"] = polygon_name
+                sa["price"] = price
+
+                service_document = self.service_area_collection.createDocument()
+                service_document.set(sa)
+                service_document._key = email
+                service_document.save()
+                self.res["status"] = True
+
+        return JsonResponse(self.res, safe=False)
