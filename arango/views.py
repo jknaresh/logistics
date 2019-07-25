@@ -219,7 +219,8 @@ class ServiceArea(View):
                 data = dict()
 
                 # prepare required data and assignment
-                data['geojson'] = sa["geojson"]
+                j = sa["geojson"]
+                data['geojson'] = j.store
                 data["polygon_name"] = sa["polygon_name"]
                 data["price"] = sa["price"]
 
@@ -237,7 +238,8 @@ class ServiceArea(View):
                 data = dict()
 
                 # prepare required data and assignment
-                data['geojson'] = sa["geojson"]
+                j = sa["geojson"]
+                data['geojson'] = j.store
                 data["email"] = sa._key
                 data["polygon_name"] = sa["polygon_name"]
                 data["price"] = sa["price"]
