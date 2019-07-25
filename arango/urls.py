@@ -9,4 +9,6 @@ urlpatterns = [
     path('init/', views.Initialize.as_view()),
     path('provider/', csrf_exempt(views.Provider.as_view())),
     path('service-area/', csrf_exempt(views.ServiceArea.as_view())),
+    path('service-provider/', views.ServiceProvider.as_view()),
+
 ]

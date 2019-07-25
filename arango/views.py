@@ -218,7 +218,7 @@ class ServiceArea(View):
             except Exception as e:
 
                 sa = dict()
-                sa['geojson'] = geojson
+                sa['geojson'] = json.loads(geojson)
                 sa["polygon_name"] = polygon_name
                 sa["price"] = price
 
@@ -229,3 +229,47 @@ class ServiceArea(View):
                 self.res["status"] = True
 
         return JsonResponse(self.res, safe=False)
+
+
+class ServiceProvider(View):
+    permission_checker = None
+
+    def get(self, request, *args, **kwargs):
+        """
+        http://127.0.0.1:8000/service-provider/?lat=78.4529560804367&lng=17.4173210167708
+
+        :param request:
+        :param args:
+        :param kwargs:
+        :return:
+        """
+        all_service_providers_list = list()
+
+        lat = request.GET.get("lat")
+        lng = request.GET.get("lng")
+
+        t1 = [float(lat), float(lng)]
+
+        target = dict()
+        target["type"] = "Polygon"
+        target["coordinates"] = [[t1, t1, t1, t1]]
+
+        aql = """
+            FOR doc IN service_area
+                FILTER GEO_CONTAINS(doc.geojson, @target)
+                FOR d1 IN provider
+                    FILTER doc._key == d1._key
+                RETURN {"name": d1.name, "polygon_name": doc.polygon_name, "price": doc.price, "geojson": doc.geojson}
+        """
+
+        # prepare bind data dict
+        bind = dict()
+        bind["target"] = target
+
+        # execute AQL using AQLQuery method
+        query_result = db_conn.AQLQuery(aql, rawResults=True, bindVars=bind)
+        for row in query_result:
+            all_service_providers_list.append(row)
+
+        # return json data
+        return JsonResponse(all_service_providers_list, safe=False)
